@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>Untitled</title>
+    
+
+  </head>
+    
+  <body>
+  <!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกมบันไดงูสมการ - 2 Players</title>
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #1e1e2f;
+            color: #fff;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 { color: #ffeb3b; margin-bottom: 5px; }
+        .subtitle { color: #aaa; margin-bottom: 20px; }
+        
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(10, 50px);
+            grid-template-rows: repeat(10, 50px);
+            gap: 2px;
+            background-color: #444;
+            border: 5px solid #fff;
+            margin-bottom: 20px;
+        }
+        .cell {
+            width: 50px;
+            height: 50px;
+            background-color: #2a2a40;
+            color: #fff;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2px; /* เว้นระยะเวลาตัวเดินทับกัน */
+        }
+        .cell:nth-child(even) { background-color: #3f3f5a; }
+        .cell:nth-child(odd) { background-color: #52527a; }
+        
+        .cell-number {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            font-size: 11px;
+            opacity: 0.7;
+            font-weight: bold;
+        }
+
+        /* ตัวผู้เล่น */
+        .player {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            z-index: 10;
+            transition: all 0.3s;
+        }
+        .player1 { background-color: #00e676; box-shadow: 0 0 8px #00e676; } /* สีเขียว */
+        .player2 { background-color: #2196f3; box-shadow: 0 0 8px #2196f3; } /* สีฟ้า */
+        
+        .controls {
+            background: #2a2a40;
+            padding: 15px 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .status-panel {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        .p1-status { color: #00e676; font-weight: bold; }
+        .p2-status { color: #2196f3; font-weight: bold; }
+
+        .turn-indicator {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 18px;
+            cursor: pointer;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        /* สีปุ่มตามตาผู้เล่น */
+        .btn-p1 { background-color: #00c853; }
+        .btn-p1:hover { background-color: #00e676; }
+        .btn-p2 { background-color: #1976d2; }
+        .btn-p2:hover { background-color: #2196f3; }
+        button:disabled { background-color: #555 !important; cursor: not-allowed; color: #888; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal-content {
+            background: #fff;
+            color: #333;
+            padding: 30px;
+            border-radius: 10px;
+            font-size: 24px;
+            text-align: center;
+            max-width: 400px;
+        }
+        .modal-content input {
+            font-size: 24px;
+            width: 120px;
+            text-align: center;
+            margin: 10px;
+            padding: 5px;
+        }
+        .info { color: #ffeb3b; font-size: 13px; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+    <h1>🐍 บันไดงูสมการ 🪜</h1>
+    <div class="subtitle">โหมดประลอง 2 ผู้เล่น (ฮาร์ดคอร์)</div>
+    
+    <div class="game-container">
+        <div class="board" id="board"></div>
+        
+        <div class="controls">
+            <div class="status-panel">
+                <div class="p1-status">🟢 ผู้เล่น 1: ช่อง <span id="pos-p1">1</span></div>
+                <div class="p2-status">🔵 ผู้เล่น 2: ช่อง <span id="pos-p2">1</span></div>
+            </div>
+
+            <div class="turn-indicator" id="turn-text" style="color: #00e676;">ถึงตาผู้เล่น 1</div>
+            
+            <button id="roll-btn" class="btn-p1" onclick="rollDice()">🎲 ทอยลูกเต๋า</button>
+            <p>ทอยได้: <span id="dice-text">-</span></p>
+
+            <div class="info">บันได: 4->14, 9->31, 28->84, 51->67 <br> งู: 16->6, 49->11, 62->19, 98->78</div>
+        </div>
+    </div>
+
+    <div class="modal" id="math-modal">
+        <div class="modal-content">
+            <h3 id="modal-title" style="color: #d32f2f;">ผู้เล่น X ตอบด่วน!</h3>
+            <p id="math-question">x + 5 = ?</p>
+            <input type="number" id="math-answer" placeholder="ค่า x = ?">
+            <br>
+            <button style="background-color: #ff3d00; margin-top: 15px;" onclick="checkAnswer()">ส่งคำตอบ</button>
+        </div>
+    </div>
+
+    <script>
+        // สถานะของผู้เล่นทั้ง 2 คน
+        let pPos = [1, 1]; // [ตำแหน่ง P1, ตำแหน่ง P2]
+        let turn = 0;      // 0 = P1, 1 = P2
+        let pendingPos = 1;
+        let correctAnswer = 0;
+
+        const snakesAndLadders = {
+            4: 14, 9: 31, 28: 84, 51: 67, 
+            16: 6, 49: 11, 62: 19, 98: 78 
+        };
+
+        function createBoard() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            for (let row = 9; row >= 0; row--) {
+                let rowCells = [];
+                for (let col = 1; col <= 10; col++) {
+                    rowCells.push(row * 10 + col);
+                }
+                if (row % 2 !== 0) rowCells.reverse(); 
+
+                rowCells.forEach(num => {
+                    let cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.id = 'cell-' + num;
+                    cell.innerHTML = `<span class="cell-number">${num}</span>`;
+                    board.appendChild(cell);
+                });
+            }
+            updatePlayerPosition();
+        }
+
+        function updatePlayerPosition() {
+            // ลบตัวผู้เล่นทั้งหมดออกจากกระดานก่อน
+            document.querySelectorAll('.player').forEach(p => p.remove());
+
+            // วางผู้เล่น 1 (สีเขียว)
+            const cell1 = document.getElementById('cell-' + pPos[0]);
+            if (cell1) {
+                let p1 = document.createElement('div');
+                p1.className = 'player player1';
+                cell1.appendChild(p1);
+            }
+
+            // วางผู้เล่น 2 (สีฟ้า)
+            const cell2 = document.getElementById('cell-' + pPos[1]);
+            if (cell2) {
+                let p2 = document.createElement('div');
+                p2.className = 'player player2';
+                cell2.appendChild(p2);
+            }
+
+            // อัปเดตข้อความตำแหน่ง
+            document.getElementById('pos-p1').innerText = pPos[0];
+            document.getElementById('pos-p2').innerText = pPos[1];
+        }
+
+        function rollDice() {
+            const roll = Math.floor(Math.random() * 6) + 1;
+            document.getElementById('dice-text').innerText = roll;
+            
+            pendingPos = pPos[turn] + roll;
+            if (pendingPos > 100) pendingPos = 100; 
+
+            document.getElementById('roll-btn').disabled = true; 
+            
+            // ตั้งค่าหน้าต่างคำถามให้ตรงกับผู้เล่น
+            const playerName = turn === 0 ? "ผู้เล่น 1 (สีเขียว)" : "ผู้เล่น 2 (สีฟ้า)";
+            const playerColor = turn === 0 ? "#00c853" : "#1976d2";
+            document.getElementById('modal-title').innerText = `ตาของ ${playerName} !`;
+            document.getElementById('modal-title').style.color = playerColor;
+
+            generateMathQuestion();
+        }
+
+        function generateMathQuestion() {
+            const type = Math.floor(Math.random() * 4);
+            let questionStr = "";
+            
+            if (type === 0) {
+                let x = Math.floor(Math.random() * 15) - 5; 
+                let a = Math.floor(Math.random() * 5) + 5; 
+                let c = Math.floor(Math.random() * 4) + 1; 
+                let b = Math.floor(Math.random() * 20) - 10;
+                let d = (a * x) + b - (c * x);
+                let bStr = b >= 0 ? `+ ${b}` : `- ${Math.abs(b)}`;
+                let dStr = d >= 0 ? `+ ${d}` : `- ${Math.abs(d)}`;
+                questionStr = `จงหาค่า x:\n ${a}x ${bStr} = ${c}x ${dStr}`;
+                correctAnswer = x;
+            } else if (type === 1) {
+                let x = Math.floor(Math.random() * 20) - 10; 
+                let a = Math.floor(Math.random() * 6) + 2; 
+                let b = Math.floor(Math.random() * 15) - 5;
+                let c = a * (x + b);
+                let bStr = b >= 0 ? `+ ${b}` : `- ${Math.abs(b)}`;
+                questionStr = `จงหาค่า x:\n ${a}(x ${bStr}) = ${c}`;
+                correctAnswer = x;
+            } else if (type === 2) {
+                let x = Math.floor(Math.random() * 20) + 1; 
+                let b = Math.floor(Math.random() * 5) + 2; 
+                let c = Math.floor(Math.random() * 10) + 2; 
+                let a = (b * c) - x;
+                let aStr = a >= 0 ? `+ ${a}` : `- ${Math.abs(a)}`;
+                questionStr = `จงหาค่า x:\n (x ${aStr}) / ${b} = ${c}`;
+                correctAnswer = x;
+            } else {
+                let x1 = Math.floor(Math.random() * 10) + 1; 
+                let x2 = -(Math.floor(Math.random() * 10) + 1); 
+                let b = -(x1 + x2);
+                let c = x1 * x2;
+                let bStr = b === 1 ? "+ x " : (b === -1 ? "- x " : (b > 0 ? `+ ${b}x ` : `- ${Math.abs(b)}x `));
+                let cStr = c === 0 ? "" : (c > 0 ? `+ ${c}` : `- ${Math.abs(c)}`);
+                questionStr = `จงหาค่า x (ที่เป็นจำนวนเต็มบวก) จาก:\nx² ${bStr}${cStr} = 0`;
+                correctAnswer = x1;
+            }
+
+            document.getElementById('math-question').innerText = questionStr;
+            document.getElementById('math-answer').value = '';
+            document.getElementById('math-modal').style.display = 'flex';
+            document.getElementById('math-answer').focus();
+        }
+
+        function checkAnswer() {
+            const userAnswer = parseInt(document.getElementById('math-answer').value);
+            const playerName = turn === 0 ? "ผู้เล่น 1" : "ผู้เล่น 2";
+            
+            if (isNaN(userAnswer)) {
+                alert("กรุณาใส่ตัวเลขด้วยครับ!");
+                return;
+            }
+
+            document.getElementById('math-modal').style.display = 'none';
+
+            if (userAnswer === correctAnswer) {
+                alert(`✅ ${playerName} ตอบถูก! เดินไปที่ช่อง ${pendingPos}`);
+                pPos[turn] = pendingPos;
+                checkSnakesAndLadders();
+            } else {
+                alert(`❌ ${playerName} ตอบผิด! คำตอบคือ x = ${correctAnswer}\nถอยหลัง 2 ช่องนะ!`);
+                pPos[turn] = Math.max(1, pPos[turn] - 2); 
+            }
+            
+            updatePlayerPosition();
+
+            // เช็คว่าชนะหรือยัง
+            if (pPos[turn] === 100) {
+                setTimeout(() => {
+                    alert(`🎉 ยินดีด้วย! ${playerName} เป็นผู้ชนะ!!`);
+                    // รีเซ็ตเกมใหม่
+                    pPos = [1, 1];
+                    turn = 0;
+                    updateUI();
+                    updatePlayerPosition();
+                }, 500);
+            } else {
+                // ถ้ายังไม่ชนะ ให้สลับเทิร์น
+                turn = turn === 0 ? 1 : 0;
+                updateUI();
+            }
+        }
+
+        function checkSnakesAndLadders() {
+            if (snakesAndLadders[pPos[turn]]) {
+                const newPos = snakesAndLadders[pPos[turn]];
+                const playerName = turn === 0 ? "ผู้เล่น 1" : "ผู้เล่น 2";
+
+                if (newPos > pPos[turn]) {
+                    alert(`🪜 โชคดี! ${playerName} ได้ปีนบันไดไปช่อง ${newPos}`);
+                } else {
+                    alert(`🐍 ซวยแล้ว! ${playerName} โดนงูกิน ร่วงไปที่ช่อง ${newPos}`);
+                }
+                pPos[turn] = newPos;
+            }
+        }
+
+        function updateUI() {
+            const turnText = document.getElementById('turn-text');
+            const rollBtn = document.getElementById('roll-btn');
+            
+            document.getElementById('dice-text').innerText = "-";
+            rollBtn.disabled = false;
+
+            if (turn === 0) {
+                turnText.innerText = "ถึงตาผู้เล่น 1";
+                turnText.style.color = "#00e676";
+                rollBtn.className = "btn-p1";
+            } else {
+                turnText.innerText = "ถึงตาผู้เล่น 2";
+                turnText.style.color = "#2196f3";
+                rollBtn.className = "btn-p2";
+            }
+        }
+
+        document.getElementById("math-answer").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                checkAnswer();
+            }
+        });
+
+        // สร้างกระดานครั้งแรก
+        createBoard();
+    </script>
+</body>
+</html>
+    
+  </body>
+  
+</html>
